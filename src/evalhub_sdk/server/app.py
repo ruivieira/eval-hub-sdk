@@ -1,0 +1,144 @@
+"""Server application for running framework adapters."""
+
+import logging
+import signal
+import sys
+from typing import Optional
+
+import uvicorn
+
+from ..api.router import AdapterAPIRouter
+from ..models.framework import AdapterConfig, FrameworkAdapter
+
+logger = logging.getLogger(__name__)
+
+
+class AdapterServer:
+    """Server for running framework adapters with the standard SDK API."""
+
+    def __init__(self, adapter: FrameworkAdapter):
+        """Initialize the server with a framework adapter.
+
+        Args:
+            adapter: The framework adapter to run
+        """
+        self.adapter = adapter
+        self.router = AdapterAPIRouter(adapter)
+        self.app = self.router.get_app()
+        self._setup_logging()
+
+    def _setup_logging(self):
+        """Set up logging configuration."""
+        logging.basicConfig(
+            level=getattr(logging, self.adapter.config.log_level.upper()),
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[logging.StreamHandler(sys.stdout)],
+        )
+
+    def run(
+        self,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+        workers: Optional[int] = None,
+        reload: bool = False,
+        **kwargs,
+    ):
+        """Run the adapter server.
+
+        Args:
+            host: Host to bind to (overrides config)
+            port: Port to bind to (overrides config)
+            workers: Number of workers (overrides config)
+            reload: Enable auto-reload for development
+            **kwargs: Additional arguments passed to uvicorn.run
+        """
+        config = self.adapter.config
+
+        # Use provided values or fall back to config
+        run_host = host or config.host
+        run_port = port or config.port
+        run_workers = workers or config.workers
+
+        logger.info(
+            f"Starting {config.adapter_name} server on {run_host}:{run_port} "
+            f"with {run_workers} worker(s)"
+        )
+
+        # Set up signal handlers for graceful shutdown
+        self._setup_signal_handlers()
+
+        try:
+            uvicorn.run(
+                self.app,
+                host=run_host,
+                port=run_port,
+                workers=run_workers if not reload else 1,  # Single worker for reload
+                reload=reload,
+                log_level=config.log_level.lower(),
+                access_log=True,
+                **kwargs,
+            )
+        except KeyboardInterrupt:
+            logger.info("Server stopped by user")
+        except Exception as e:
+            logger.exception(f"Server error: {e}")
+            sys.exit(1)
+
+    def _setup_signal_handlers(self):
+        """Set up signal handlers for graceful shutdown."""
+
+        def signal_handler(signum, frame):
+            logger.info(f"Received signal {signum}, initiating shutdown...")
+            # The adapter shutdown will be handled by FastAPI's shutdown event
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+
+    async def run_async(
+        self, host: Optional[str] = None, port: Optional[int] = None, **kwargs
+    ):
+        """Run the server asynchronously.
+
+        Useful for embedding the server in other applications.
+
+        Args:
+            host: Host to bind to
+            port: Port to bind to
+            **kwargs: Additional uvicorn config options
+        """
+        config = self.adapter.config
+
+        uvicorn_config = uvicorn.Config(
+            self.app,
+            host=host or config.host,
+            port=port or config.port,
+            log_level=config.log_level.lower(),
+            **kwargs,
+        )
+
+        server = uvicorn.Server(uvicorn_config)
+
+        try:
+            await server.serve()
+        except KeyboardInterrupt:
+            logger.info("Server stopped")
+        except Exception as e:
+            logger.exception(f"Server error: {e}")
+            raise
+
+
+def run_adapter_server(adapter_class, config: AdapterConfig, **server_kwargs):
+    """Convenience function to create and run an adapter server.
+
+    Args:
+        adapter_class: The FrameworkAdapter class to instantiate
+        config: Configuration for the adapter
+        **server_kwargs: Additional arguments for the server
+    """
+    # Create adapter instance
+    adapter = adapter_class(config)
+
+    # Create and run server
+    server = AdapterServer(adapter)
+    server.run(**server_kwargs)

@@ -1,0 +1,324 @@
+"""Framework adapter models and base classes."""
+
+import asyncio
+from abc import ABC, abstractmethod
+from collections.abc import AsyncGenerator
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field
+
+from .api import (
+    BenchmarkInfo,
+    EvaluationJob,
+    EvaluationRequest,
+    EvaluationResponse,
+    FrameworkInfo,
+    HealthResponse,
+    JobStatus,
+)
+
+
+class AdapterConfig(BaseModel):
+    """Base configuration for framework adapters."""
+
+    # Adapter identification
+    framework_id: str = Field(..., description="Unique framework identifier")
+    adapter_name: str = Field(..., description="Adapter display name")
+    version: str = Field("1.0.0", description="Adapter version")
+
+    # Server configuration
+    host: str = Field("0.0.0.0", description="Server host to bind to")
+    port: int = Field(8000, description="Server port")
+    workers: int = Field(1, description="Number of worker processes")
+
+    # Framework-specific settings
+    framework_config: dict[str, Any] = Field(
+        default_factory=dict, description="Framework-specific configuration"
+    )
+
+    # Resource limits
+    max_concurrent_jobs: int = Field(
+        5, description="Maximum concurrent evaluation jobs"
+    )
+    job_timeout_seconds: int = Field(3600, description="Maximum job execution time")
+    memory_limit_gb: Optional[float] = Field(None, description="Memory limit in GB")
+
+    # Logging and monitoring
+    log_level: str = Field("INFO", description="Logging level")
+    enable_metrics: bool = Field(True, description="Enable metrics collection")
+    health_check_interval: int = Field(
+        30, description="Health check interval in seconds"
+    )
+
+    class Config:
+        """Pydantic configuration."""
+
+        extra = "allow"
+
+
+class AdapterMetadata(BaseModel):
+    """Metadata for framework adapters."""
+
+    # Basic information
+    name: str = Field(..., description="Adapter name")
+    description: Optional[str] = Field(None, description="Adapter description")
+    version: str = Field(..., description="Adapter version")
+    author: Optional[str] = Field(None, description="Adapter author")
+
+    # Framework information
+    framework_name: str = Field(..., description="Name of the wrapped framework")
+    framework_version: str = Field(..., description="Version of the wrapped framework")
+    framework_url: Optional[str] = Field(
+        None, description="Framework documentation/repository URL"
+    )
+
+    # Capabilities
+    supported_model_types: list[str] = Field(
+        default_factory=list, description="Supported model types"
+    )
+    supported_metrics: list[str] = Field(
+        default_factory=list, description="Supported evaluation metrics"
+    )
+    supports_batch_evaluation: bool = Field(
+        True, description="Supports batch evaluation"
+    )
+    supports_few_shot: bool = Field(True, description="Supports few-shot evaluation")
+    supports_custom_datasets: bool = Field(
+        False, description="Supports custom datasets"
+    )
+
+    # Resource requirements
+    min_memory_gb: Optional[float] = Field(
+        None, description="Minimum memory requirement"
+    )
+    requires_gpu: bool = Field(False, description="Requires GPU")
+    max_batch_size: Optional[int] = Field(None, description="Maximum batch size")
+
+    # Contact and documentation
+    contact_email: Optional[str] = Field(None, description="Contact email")
+    documentation_url: Optional[str] = Field(None, description="Documentation URL")
+    repository_url: Optional[str] = Field(None, description="Source repository URL")
+    license: Optional[str] = Field(None, description="License information")
+
+
+class FrameworkAdapter(ABC):
+    """Abstract base class for framework adapters.
+
+    This class defines the interface that all framework adapters must implement
+    to integrate with EvalHub via the SDK.
+    """
+
+    def __init__(self, config: AdapterConfig):
+        """Initialize the adapter with configuration."""
+        self.config = config
+        self._jobs: dict[str, EvaluationJob] = {}
+        self._shutdown_event = asyncio.Event()
+
+    @abstractmethod
+    async def initialize(self) -> None:
+        """Initialize the framework adapter.
+
+        This method should:
+        - Load the underlying evaluation framework
+        - Verify dependencies are available
+        - Set up any required resources
+        - Prepare for evaluation requests
+
+        Raises:
+            Exception: If initialization fails
+        """
+        pass
+
+    @abstractmethod
+    async def get_framework_info(self) -> FrameworkInfo:
+        """Get information about this framework adapter.
+
+        Returns:
+            FrameworkInfo: Metadata about the framework and its capabilities
+        """
+        pass
+
+    @abstractmethod
+    async def list_benchmarks(self) -> list[BenchmarkInfo]:
+        """List all available benchmarks.
+
+        Returns:
+            List[BenchmarkInfo]: Available benchmarks with their metadata
+        """
+        pass
+
+    @abstractmethod
+    async def get_benchmark_info(self, benchmark_id: str) -> Optional[BenchmarkInfo]:
+        """Get detailed information about a specific benchmark.
+
+        Args:
+            benchmark_id: The benchmark identifier
+
+        Returns:
+            BenchmarkInfo: Benchmark information, or None if not found
+        """
+        pass
+
+    @abstractmethod
+    async def submit_evaluation(self, request: EvaluationRequest) -> EvaluationJob:
+        """Submit an evaluation job.
+
+        Args:
+            request: The evaluation request
+
+        Returns:
+            EvaluationJob: The created job with initial status
+
+        Raises:
+            ValueError: If request is invalid
+            RuntimeError: If unable to submit job
+        """
+        pass
+
+    @abstractmethod
+    async def get_job_status(self, job_id: str) -> Optional[EvaluationJob]:
+        """Get the current status of an evaluation job.
+
+        Args:
+            job_id: The job identifier
+
+        Returns:
+            EvaluationJob: Current job status, or None if not found
+        """
+        pass
+
+    @abstractmethod
+    async def get_evaluation_results(self, job_id: str) -> Optional[EvaluationResponse]:
+        """Get the results of a completed evaluation.
+
+        Args:
+            job_id: The job identifier
+
+        Returns:
+            EvaluationResponse: Evaluation results, or None if not available
+        """
+        pass
+
+    @abstractmethod
+    async def cancel_job(self, job_id: str) -> bool:
+        """Cancel a running evaluation job.
+
+        Args:
+            job_id: The job identifier
+
+        Returns:
+            bool: True if job was cancelled, False if not found or already completed
+        """
+        pass
+
+    @abstractmethod
+    async def health_check(self) -> HealthResponse:
+        """Perform a health check of the framework adapter.
+
+        Returns:
+            HealthResponse: Current health status and resource information
+        """
+        pass
+
+    @abstractmethod
+    async def shutdown(self) -> None:
+        """Gracefully shutdown the framework adapter.
+
+        This method should:
+        - Cancel any running jobs
+        - Clean up resources
+        - Save any necessary state
+        """
+        pass
+
+    # Optional methods with default implementations
+
+    async def stream_job_updates(
+        self, job_id: str
+    ) -> AsyncGenerator[EvaluationJob, None]:
+        """Stream real-time updates for a job.
+
+        Default implementation polls get_job_status. Framework adapters
+        can override this to provide true streaming updates.
+
+        Args:
+            job_id: The job identifier
+
+        Yields:
+            EvaluationJob: Updated job status
+        """
+        while not self._shutdown_event.is_set():
+            job = await self.get_job_status(job_id)
+            if not job:
+                break
+
+            yield job
+
+            if job.status in [
+                JobStatus.COMPLETED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+            ]:
+                break
+
+            await asyncio.sleep(1.0)  # Poll every second
+
+    async def list_active_jobs(self) -> list[EvaluationJob]:
+        """List all active evaluation jobs.
+
+        Returns:
+            List[EvaluationJob]: List of active jobs
+        """
+        active_jobs = []
+        for job in self._jobs.values():
+            if job.status in [JobStatus.PENDING, JobStatus.RUNNING]:
+                active_jobs.append(job)
+        return active_jobs
+
+    async def cleanup_completed_jobs(self, max_age_seconds: int = 3600) -> int:
+        """Clean up old completed jobs.
+
+        Args:
+            max_age_seconds: Maximum age for completed jobs
+
+        Returns:
+            int: Number of jobs cleaned up
+        """
+        from datetime import datetime, timezone
+
+        current_time = datetime.now(timezone.utc)
+        cleaned_count = 0
+
+        jobs_to_remove = []
+        for job_id, job in self._jobs.items():
+            if job.status in [
+                JobStatus.COMPLETED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+            ]:
+                if job.completed_at:
+                    age_seconds = (current_time - job.completed_at).total_seconds()
+                    if age_seconds > max_age_seconds:
+                        jobs_to_remove.append(job_id)
+                        cleaned_count += 1
+
+        for job_id in jobs_to_remove:
+            del self._jobs[job_id]
+
+        return cleaned_count
+
+    def get_adapter_metadata(self) -> AdapterMetadata:
+        """Get metadata about this adapter.
+
+        Subclasses should override this to provide specific metadata.
+
+        Returns:
+            AdapterMetadata: Adapter metadata
+        """
+        return AdapterMetadata(
+            name=self.config.adapter_name,
+            description=f"Framework adapter for {self.config.framework_id}",
+            version=self.config.version,
+            framework_name=self.config.framework_id,
+            framework_version="unknown",
+        )
