@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "eval-hub"
-version = "0.1.0"
+name = "eval-hub-sdk"
+version = "0.1.0a0"
 description = "SDK for building framework adapters that integrate with TrustyAI EvalHub"
 authors = [
     {name = "Rui Vieira", email = "rui@redhat.com"},
@@ -31,26 +31,26 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Core functionality - for main eval-hub service and basic operations
+# Core functionality - of main eval-hub-sdk service and basic operations
 core = [
     "httpx>=0.25.0",
 ]
 
 # Adapter development - for building custom evaluation framework adapters
 adapter = [
-    "eval-hub[core]",
+    "eval-hub-sdk[core]",
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
 ]
 
 # Client API - for end users in Jupyter notebooks and scripts
 client = [
-    "eval-hub[core]",
+    "eval-hub-sdk[core]",
 ]
 
 # CLI application - command-line interface
 cli = [
-    "eval-hub[core]",
+    "eval-hub-sdk[core]",
     "typer>=0.9.0",
     "rich>=13.0.0",
 ]
@@ -73,7 +73,7 @@ examples = [
 ]
 
 # All core functionality (excludes examples which are optional)
-all = ["eval-hub[core,adapter,client,cli,dev]"]
+all = ["eval-hub-sdk[core,adapter,client,cli,dev]"]
 
 [project.urls]
 Homepage = "https://github.com/eval-hub"
