@@ -1,5 +1,6 @@
 """Unit tests for the simplified adapter models."""
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -19,6 +20,28 @@ from evalhub.adapter import (
 )
 
 
+@pytest.fixture
+def mock_job_spec_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Create a temporary job spec file and set environment variable."""
+    # Create test job spec
+    job_spec = {
+        "job_id": "test-job-001",
+        "benchmark_id": "mmlu",
+        "model": {"url": "http://localhost:8000", "name": "test-model"},
+        "num_examples": 10,
+        "benchmark_config": {"random_seed": 42},
+    }
+
+    # Write to temp file
+    spec_file = tmp_path / "job.json"
+    spec_file.write_text(json.dumps(job_spec))
+
+    # Set environment variable
+    monkeypatch.setenv("EVALHUB_JOB_SPEC_PATH", str(spec_file))
+
+    return spec_file
+
+
 class TestJobSpec:
     """Tests for JobSpec model."""
 
@@ -29,16 +52,15 @@ class TestJobSpec:
             benchmark_id="mmlu",
             model=ModelConfig(url="http://localhost:8000", name="test-model"),
             num_examples=10,
-            num_few_shot=5,
-            random_seed=42,
+            benchmark_config={"num_few_shot": 5, "random_seed": 42},
         )
 
         assert spec.job_id == "test-job-001"
         assert spec.benchmark_id == "mmlu"
         assert spec.model.name == "test-model"
         assert spec.num_examples == 10
-        assert spec.num_few_shot == 5
-        assert spec.random_seed == 42
+        assert spec.benchmark_config["num_few_shot"] == 5
+        assert spec.benchmark_config["random_seed"] == 42
 
     def test_creating_jobspec_with_minimal_fields(self) -> None:
         """Test creating JobSpec with minimal fields."""
@@ -51,8 +73,7 @@ class TestJobSpec:
         assert spec.job_id == "test-job-002"
         assert spec.benchmark_id == "hellaswag"
         assert spec.num_examples is None
-        assert spec.num_few_shot is None
-        assert spec.random_seed == 42  # Default value
+        assert spec.benchmark_config == {}
 
     def test_jobspec_with_benchmarkspecific_configuration(self) -> None:
         """Test JobSpec with benchmark-specific configuration."""
@@ -384,7 +405,7 @@ class TestFrameworkAdapter:
         with pytest.raises(TypeError):
             FrameworkAdapter()  # type: ignore
 
-    def test_implementing_frameworkadapter(self) -> None:
+    def test_implementing_frameworkadapter(self, mock_job_spec_file: Path) -> None:
         """Test implementing FrameworkAdapter."""
 
         class TestAdapter(FrameworkAdapter):
@@ -405,8 +426,11 @@ class TestFrameworkAdapter:
         # Should be able to instantiate the implementation
         adapter = TestAdapter()
         assert adapter is not None
+        assert mock_job_spec_file.exists()  # Use fixture
 
-    def test_running_a_benchmark_job_through_the_adapter(self) -> None:
+    def test_running_a_benchmark_job_through_the_adapter(
+        self, mock_job_spec_file: Path
+    ) -> None:
         """Test running a benchmark job through the adapter."""
 
         class TestAdapter(FrameworkAdapter):
@@ -487,3 +511,4 @@ class TestFrameworkAdapter:
         assert len(callbacks.status_updates) == 2
         assert callbacks.status_updates[0].phase == JobPhase.INITIALIZING
         assert callbacks.status_updates[1].phase == JobPhase.RUNNING_EVALUATION
+        assert mock_job_spec_file.exists()  # Use fixture

@@ -7,7 +7,7 @@ metadata:
   name: eval-job-001-spec
   namespace: evalhub
 data:
-  spec.json: |
+  job.json: |
     {
       "job_id": "eval-job-001",
       "benchmark_id": "mmlu",
@@ -54,10 +54,10 @@ spec:
       image: ghcr.io/your-org/simple-adapter:latest
       imagePullPolicy: IfNotPresent
 
-      # ConfigMap mounted at /etc/eval-job/spec.json
+      # ConfigMap mounted at /meta/job.json
       volumeMounts:
         - name: job-spec
-          mountPath: /etc/eval-job
+          mountPath: /meta
           readOnly: true
 
       # Environment variables for registry access

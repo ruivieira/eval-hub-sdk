@@ -25,16 +25,18 @@ class DefaultCallbacks(JobCallbacks):
 
     Example:
         ```python
-        # Production (with sidecar for status updates)
+        # Production (with evalhub for status updates)
         callbacks = DefaultCallbacks(
+            job_id="my-job-123",
             sidecar_url="http://localhost:8080",
             registry_url="ghcr.io",
             registry_username=os.getenv("REGISTRY_USER"),
             registry_password=os.getenv("REGISTRY_TOKEN")
         )
 
-        # Local development (no sidecar, just logging)
+        # Local development (no evalhub, just logging)
         callbacks = DefaultCallbacks(
+            job_id="my-job-123",
             registry_url="localhost:5000",
             insecure=True
         )
@@ -46,6 +48,7 @@ class DefaultCallbacks(JobCallbacks):
 
     def __init__(
         self,
+        job_id: str,
         sidecar_url: str | None = None,
         registry_url: str | None = None,
         registry_username: str | None = None,
@@ -55,13 +58,15 @@ class DefaultCallbacks(JobCallbacks):
         """Initialize default callbacks.
 
         Args:
-            sidecar_url: URL of sidecar service for status updates (optional).
+            job_id: Job identifier for API endpoint construction.
+            sidecar_url: URL of evalhub service for status updates (optional).
                         If None, status updates are logged locally.
             registry_url: OCI registry URL (e.g., "ghcr.io")
             registry_username: Registry username
             registry_password: Registry password/token
             insecure: Allow insecure HTTP connections to registry
         """
+        self.job_id = job_id
         self.sidecar_url = sidecar_url.rstrip("/") if sidecar_url else None
 
         # Initialize OCI persister
@@ -87,25 +92,25 @@ class DefaultCallbacks(JobCallbacks):
                 )
 
     def report_status(self, update: JobStatusUpdate) -> None:
-        """Report status update to sidecar or log it.
+        """Report status update to evalhub or log it.
 
         Args:
             update: Status update to report
         """
-        # If sidecar available, send status update
+        # If evalhub available, send status update
         if self.sidecar_url and self._httpx_available:
             try:
-                url = f"{self.sidecar_url}/status"
+                url = f"{self.sidecar_url}/api/v1/evaluations/jobs/{self.job_id}/update"
                 data = update.model_dump(mode="json", exclude_none=True)
 
                 response = self.httpx.post(url, json=data, timeout=10.0)
                 response.raise_for_status()
 
-                logger.debug(f"Status update sent to sidecar: {update.status}")
+                logger.debug(f"Status update sent to evalhub: {update.status}")
                 return
 
             except Exception as e:
-                logger.warning(f"Failed to send status to sidecar: {e}")
+                logger.warning(f"Failed to send status to evalhub: {e}")
                 # Fall through to local logging
 
         # Local logging
@@ -135,25 +140,25 @@ class DefaultCallbacks(JobCallbacks):
         return self.persister.persist(spec)
 
     def report_results(self, results: JobResults) -> None:
-        """Report final evaluation results to sidecar or log them.
+        """Report final evaluation results to evalhub or log them.
 
         Args:
             results: Final job results to report
         """
-        # If sidecar available, send results
+        # If evalhub available, send results
         if self.sidecar_url and self._httpx_available:
             try:
-                url = f"{self.sidecar_url}/results"
+                url = f"{self.sidecar_url}/api/v1/evaluations/jobs/{self.job_id}/update"
                 data = results.model_dump(mode="json", exclude_none=True)
 
                 response = self.httpx.post(url, json=data, timeout=30.0)
                 response.raise_for_status()
 
-                logger.info(f"Results for job {results.job_id} sent to sidecar")
+                logger.info(f"Results for job {results.job_id} sent to evalhub")
                 return
 
             except Exception as e:
-                logger.warning(f"Failed to send results to sidecar: {e}")
+                logger.warning(f"Failed to send results to evalhub: {e}")
                 # Fall through to local logging
 
         # Local logging

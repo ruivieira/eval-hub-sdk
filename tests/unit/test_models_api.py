@@ -33,23 +33,6 @@ class TestModelConfig:
         assert config.name == "test-model"
         assert config.url == "http://localhost:8000/v1"
 
-    def test_full_model_config(self) -> None:
-        """Test ModelConfig with extra fields (extra='allow')."""
-        config = ModelConfig(
-            url="http://localhost:8000/v1",
-            name="gpt-4",
-            provider="openai",
-            parameters={"temperature": 0.1, "max_tokens": 100},
-            device="cuda:0",
-            batch_size=8,
-        )
-        assert config.name == "gpt-4"
-        assert config.url == "http://localhost:8000/v1"
-        assert config.provider == "openai"
-        assert config.parameters == {"temperature": 0.1, "max_tokens": 100}
-        assert config.device == "cuda:0"
-        assert config.batch_size == 8
-
     def test_model_config_validation(self) -> None:
         """Test ModelConfig validation."""
         with pytest.raises(ValidationError):
@@ -118,11 +101,12 @@ class TestEvaluationRequest:
 
     def test_full_evaluation_request(self) -> None:
         """Test EvaluationRequest with all fields."""
-        model = ModelConfig(
-            url="http://localhost:8000/v1",
-            name="gpt-4",
-            provider="openai",
-        )
+        model_payload: dict[str, Any] = {
+            "url": "http://localhost:8000/v1",
+            "name": "gpt-4",
+            "provider": "openai",
+        }
+        model = ModelConfig(**model_payload)
         request = EvaluationRequest(
             benchmark_id="mmlu",
             model=model,

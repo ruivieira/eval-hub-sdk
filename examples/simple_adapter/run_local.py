@@ -2,16 +2,21 @@
 
 This demonstrates how to test your adapter implementation locally
 before deploying it to Kubernetes.
+
+For local testing, we create a temporary job spec file and set the
+EVALHUB_JOB_SPEC_PATH environment variable to point to it.
 """
 
+import json
 import logging
+import os
+import tempfile
+from pathlib import Path
 
 from evalhub.adapter import (
     JobCallbacks,
     JobResults,
-    JobSpec,
     JobStatusUpdate,
-    ModelConfig,
     OCIArtifactResult,
     OCIArtifactSpec,
 )
@@ -77,39 +82,53 @@ def main() -> None:
     logger.info("Starting local adapter test")
 
     # Create job specification
-    # In production, this would be loaded from /etc/eval-job/spec.json
-    spec = JobSpec(
-        job_id="local-test-001",
-        benchmark_id="mmlu",
-        model=ModelConfig(
-            url="http://localhost:8000/v1",  # Your local model server
-            name="test-model",
-        ),
-        num_examples=10,  # Small number for quick testing
-        num_few_shot=5,
-        random_seed=42,
-        benchmark_config={
-            "subject": "mathematics",
+    # In production, this would be loaded from /meta/job.json
+    spec_data = {
+        "job_id": "local-test-001",
+        "benchmark_id": "mmlu",
+        "model": {
+            "url": "http://localhost:8000/v1",  # Your local model server
+            "name": "test-model",
         },
-        experiment_name="local-test",
-        tags={
+        "num_examples": 10,  # Small number for quick testing
+        "benchmark_config": {
+            "subject": "mathematics",
+            "num_few_shot": 5,
+            "random_seed": 42,
+        },
+        "experiment_name": "local-test",
+        "tags": {
             "env": "local",
             "test": "true",
         },
-    )
+    }
 
-    # Create callbacks
-    callbacks = LocalCallbacks()
-
-    # Create and run adapter
-    adapter = ExampleAdapter()
-
-    logger.info(f"Running benchmark: {spec.benchmark_id}")
-    logger.info(f"Model: {spec.model.name} at {spec.model.url}")
-    logger.info(f"Examples: {spec.num_examples}")
+    # For local testing, create a temporary job spec file
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False
+    ) as temp_file:
+        json.dump(spec_data, temp_file, indent=2)
+        temp_file_path = temp_file.name
 
     try:
-        results = adapter.run_benchmark_job(spec, callbacks)
+        # Set environment variable to point to temp file
+        os.environ["EVALHUB_JOB_SPEC_PATH"] = temp_file_path
+        logger.info(f"Using temp job spec: {temp_file_path}")
+
+        # Create callbacks
+        callbacks = LocalCallbacks()
+
+        # Create adapter (will automatically load from temp file)
+        adapter = ExampleAdapter()
+
+        logger.info(f"Running benchmark: {adapter.job_spec.benchmark_id}")
+        logger.info(
+            f"Model: {adapter.job_spec.model.name} at {adapter.job_spec.model.url}"
+        )
+        logger.info(f"Examples: {adapter.job_spec.num_examples}")
+
+        # Run evaluation (pass adapter.job_spec or override with custom spec for testing)
+        results = adapter.run_benchmark_job(adapter.job_spec, callbacks)
 
         logger.info("=" * 60)
         logger.info("EVALUATION COMPLETE")
@@ -128,6 +147,11 @@ def main() -> None:
     except Exception as e:
         logger.error(f"Evaluation failed: {e}", exc_info=True)
         raise
+    finally:
+        # Clean up temp file
+        if Path(temp_file_path).exists():
+            Path(temp_file_path).unlink()
+            logger.debug(f"Cleaned up temp file: {temp_file_path}")
 
 
 if __name__ == "__main__":

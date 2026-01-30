@@ -74,6 +74,7 @@ from ..models.api import (
     ModelConfig,
 )
 from .callbacks import DefaultCallbacks
+from .config import get_job_spec_path
 from .models import (
     FrameworkAdapter,
     JobCallbacks,
@@ -85,6 +86,7 @@ from .models import (
     OCIArtifactSpec,
 )
 from .oci import OCIArtifactPersister, Persister
+from .settings import AdapterSettings
 
 # Legacy API is available but deprecated
 # from evalhub.adapter.legacy import ...
@@ -105,6 +107,9 @@ __all__ = [
     "OCIArtifactPersister",
     # Callback implementation
     "DefaultCallbacks",
+    # Configuration utilities
+    "get_job_spec_path",
+    "AdapterSettings",
     # Common models (re-exported for convenience)
     "JobStatus",
     "ModelConfig",

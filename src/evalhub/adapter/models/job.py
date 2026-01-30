@@ -1,10 +1,13 @@
 """Simplified adapter models for benchmark job execution."""
 
+from __future__ import annotations
+
+import json
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from pydantic import BaseModel, Field
 
@@ -27,6 +30,8 @@ class JobSpec(BaseModel):
 
     This contains all the information needed to run a benchmark evaluation job.
     The service creates this and mounts it via ConfigMap when launching the job pod.
+
+    Matches the Go service's EvaluationJobConfig structure.
     """
 
     # Job identification
@@ -40,14 +45,8 @@ class JobSpec(BaseModel):
     num_examples: int | None = Field(
         default=None, description="Number of examples to evaluate (None = all)"
     )
-    num_few_shot: int | None = Field(
-        default=None, description="Number of few-shot examples"
-    )
-    random_seed: int | None = Field(
-        default=42, description="Random seed for reproducibility"
-    )
 
-    # Benchmark-specific configuration
+    # Benchmark-specific configuration (adapter-specific params go here)
     benchmark_config: dict[str, Any] = Field(
         default_factory=dict, description="Benchmark-specific parameters"
     )
@@ -64,7 +63,41 @@ class JobSpec(BaseModel):
     timeout_seconds: int | None = Field(
         default=3600, description="Maximum job execution time"
     )
-    memory_limit_gb: float | None = Field(default=None, description="Memory limit hint")
+
+    @classmethod
+    def from_file(cls, path: Path | str) -> Self:
+        """Load a JobSpec from a JSON file.
+
+        Args:
+            path: Path to the JSON file containing the job specification.
+
+        Returns:
+            JobSpec: Parsed job specification.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            ValueError: If the JSON is invalid or doesn't match the schema.
+
+        Example:
+            ```python
+            # Load from explicit path
+            spec = JobSpec.from_file("/meta/job.json")
+
+            # Or use settings to get the path
+            spec = JobSpec.from_file(settings.resolved_job_spec_path)
+            ```
+        """
+        file_path = Path(path)
+
+        if not file_path.exists():
+            raise FileNotFoundError(f"Job spec file not found: {file_path}")
+
+        try:
+            with open(file_path) as f:
+                data = json.load(f)
+            return cls(**data)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in job spec file: {e}") from e
 
 
 class JobStatusUpdate(BaseModel):

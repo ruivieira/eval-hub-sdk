@@ -50,7 +50,7 @@ class ExampleAdapter(FrameworkAdapter):
         """Execute a benchmark evaluation job.
 
         Args:
-            config: Job specification from mounted ConfigMap
+            config: Job specification (typically self.job_spec, but can be overridden)
             callbacks: Callbacks for status updates and artifact persistence
 
         Returns:
@@ -180,8 +180,8 @@ class ExampleAdapter(FrameworkAdapter):
                 evaluation_metadata={
                     "framework": "simple_adapter",
                     "framework_version": "1.0.0",
-                    "num_few_shot": config.num_few_shot,
-                    "random_seed": config.random_seed,
+                    "num_few_shot": config.benchmark_config.get("num_few_shot"),
+                    "random_seed": config.benchmark_config.get("random_seed"),
                     "benchmark_config": config.benchmark_config,
                 },
                 oci_artifact=oci_artifact,
@@ -372,29 +372,18 @@ class ExampleAdapter(FrameworkAdapter):
 def main() -> None:
     """Example main function showing how to use the adapter.
 
+    The adapter automatically loads the JobSpec from the mounted ConfigMap
+    (default: /meta/job.json, configurable via EVALHUB_JOB_SPEC_PATH).
+
     In production, this would:
-    1. Load JobSpec from mounted ConfigMap
+    1. Create adapter instance (automatically loads JobSpec)
     2. Create callbacks that communicate with localhost sidecar
-    3. Create adapter instance
-    4. Call run_benchmark_job()
-    5. Handle results
+    3. Call run_benchmark_job()
+    4. Handle results
     """
     import sys
 
-    # Example: Load job spec from ConfigMap
-    # In production, this would be mounted at a known path like /etc/eval-job/spec.json
-    config_path = Path("/etc/eval-job/spec.json")
-
-    if not config_path.exists():
-        logger.error(f"Job spec not found at {config_path}")
-        sys.exit(1)
-
-    with open(config_path) as f:
-        spec_data = json.load(f)
-
-    job_spec = JobSpec(**spec_data)
-
-    # Example: Create callbacks that communicate with sidecar
+    # Define callbacks that communicate with sidecar
     # In production, these would make HTTP requests to localhost sidecar
     class SidecarCallbacks(JobCallbacks):
         def report_status(self, update: JobStatusUpdate) -> None:
@@ -417,16 +406,30 @@ def main() -> None:
                 f"Job {results.job_id} completed with score {results.overall_score}"
             )
 
-    callbacks = SidecarCallbacks()
-
-    # Create and run adapter
-    adapter = ExampleAdapter()
-
     try:
-        results = adapter.run_benchmark_job(job_spec, callbacks)
+        # Create adapter (automatically loads JobSpec from ConfigMap)
+        adapter = ExampleAdapter()
+        logger.info(f"Loaded job {adapter.job_spec.job_id}")
+        logger.info(f"Benchmark: {adapter.job_spec.benchmark_id}")
+
+        # Create callbacks
+        callbacks = SidecarCallbacks()
+
+        # Run benchmark job (pass self.job_spec or override with custom spec for testing)
+        results = adapter.run_benchmark_job(adapter.job_spec, callbacks)
         logger.info(f"Job completed successfully: {results.job_id}")
         logger.info(f"Overall score: {results.overall_score}")
+
+        # Report final results
+        callbacks.report_results(results)
+
         sys.exit(0)
+    except FileNotFoundError as e:
+        logger.error(f"Job spec not found: {e}")
+        sys.exit(1)
+    except ValueError as e:
+        logger.error(f"Invalid job spec: {e}")
+        sys.exit(1)
     except Exception:
         logger.exception("Job failed")
         sys.exit(1)

@@ -128,7 +128,7 @@ sequenceDiagram
 
 The adapter runs as a container in a Kubernetes pod with:
 
-1. **ConfigMap** containing the job specification at `/etc/eval-job/spec.json`
+1. **ConfigMap** containing the job specification at `/meta/job.json`
 2. **Sidecar container** listening on `http://localhost:8080` for callbacks
 3. **Environment variables** for registry credentials
 
@@ -213,7 +213,7 @@ COPY simple_adapter.py /app/adapter.py
 
 WORKDIR /app
 
-# Run adapter (reads config from /etc/eval-job/spec.json)
+# Run adapter (reads config from /meta/job.json, configurable via EVALHUB_JOB_SPEC_PATH)
 CMD ["python", "adapter.py"]
 ```
 
@@ -250,7 +250,7 @@ graph TB
     registry["OCI Registry<br/>(Artifacts)"]
     service["EvalHub Service"]
 
-    configmap -->|Mount /etc/eval-job/spec.json| adapter
+    configmap -->|Mount /meta/job.json| adapter
     adapter -->|Status Updates| sidecar
     adapter -->|Push Artifacts| registry
     sidecar -->|Forward Status & Results| service

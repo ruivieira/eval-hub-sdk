@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eval-hub-sdk"
-version = "0.1.0a0"
-description = "SDK for building framework adapters that integrate with TrustyAI EvalHub"
+version = "0.1.0a2"
+description = "Python SDK for EvalHub: common models, REST API client, and framework adapter SDK"
 authors = [
     {name = "Rui Vieira", email = "rui@redhat.com"},
 ]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -27,6 +27,7 @@ keywords = ["ai", "evaluation", "framework", "sdk", "trustyai"]
 
 dependencies = [
     "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
     "importlib-metadata>=6.0.0",
 ]
 
@@ -118,6 +119,7 @@ module = [
     "yaml.*",
     "yaml",
     "httpx.*",
+    "pydantic_settings",
 ]
 ignore_missing_imports = true
 

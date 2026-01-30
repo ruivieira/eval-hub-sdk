@@ -1,5 +1,6 @@
 """E2E test for OCI artifact persistence with the new adapter framework."""
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,10 +17,34 @@ from evalhub.adapter.callbacks import DefaultCallbacks
 from evalhub.adapter.models import JobStatusUpdate, OCIArtifactResult, OCIArtifactSpec
 
 
+@pytest.fixture
+def mock_job_spec_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Create a temporary job spec file and set environment variable."""
+    # Create test job spec
+    job_spec = {
+        "job_id": "test-job-001",
+        "benchmark_id": "mmlu",
+        "model": {"url": "http://localhost:8000", "name": "test-model"},
+        "num_examples": 10,
+        "benchmark_config": {"random_seed": 42},
+    }
+
+    # Write to temp file
+    spec_file = tmp_path / "job.json"
+    spec_file.write_text(json.dumps(job_spec))
+
+    # Set environment variable
+    monkeypatch.setenv("EVALHUB_JOB_SPEC_PATH", str(spec_file))
+
+    return spec_file
+
+
 class TestOCIArtifactPersistenceE2E:
     """E2E tests for OCI artifact persistence in adapter workflow."""
 
-    def test_adapter_creates_oci_artifact_via_callbacks(self, tmp_path: Path) -> None:
+    def test_adapter_creates_oci_artifact_via_callbacks(
+        self, tmp_path: Path, mock_job_spec_file: Path
+    ) -> None:
         """Test complete flow: adapter → callbacks → OCI persister."""
 
         # Track what gets called
@@ -112,8 +137,11 @@ class TestOCIArtifactPersistenceE2E:
         assert results.oci_artifact is not None
         assert results.oci_artifact.digest == "sha256:test123"
         assert "e2e-test-001" in results.oci_artifact.reference
+        assert mock_job_spec_file.exists()  # Use fixture
 
-    def test_default_callbacks_oci_persistence(self, tmp_path: Path) -> None:
+    def test_default_callbacks_oci_persistence(
+        self, tmp_path: Path, mock_job_spec_file: Path
+    ) -> None:
         """Test DefaultCallbacks can persist OCI artifacts."""
         # Create test files
         test_dir = tmp_path / "test_job"
@@ -122,7 +150,9 @@ class TestOCIArtifactPersistenceE2E:
         (test_dir / "summary.txt").write_text("Test summary")
 
         # Use DefaultCallbacks with mock registry
-        callbacks = DefaultCallbacks(registry_url="localhost:5000", insecure=True)
+        callbacks = DefaultCallbacks(
+            job_id="test-job", registry_url="localhost:5000", insecure=True
+        )
 
         # Create artifact spec
         spec = OCIArtifactSpec(
@@ -141,9 +171,12 @@ class TestOCIArtifactPersistenceE2E:
         assert result.digest.startswith("sha256:")
         assert "localhost:5000/eval-results/mmlu:test-job" in result.reference
         assert result.size_bytes > 0
+        assert mock_job_spec_file.exists()  # Use fixture
 
     @pytest.mark.asyncio
-    async def test_oci_persister_integration(self, tmp_path: Path) -> None:
+    async def test_oci_persister_integration(
+        self, tmp_path: Path, mock_job_spec_file: Path
+    ) -> None:
         """Test OCI persister directly with test files."""
         from datetime import UTC, datetime
 
@@ -192,3 +225,4 @@ class TestOCIArtifactPersistenceE2E:
         assert response.digest.startswith("sha256:")
         assert response.oci_ref == "ghcr.io/test/integration:latest@sha256:" + "0" * 64
         assert response.metadata["placeholder"] is True
+        assert mock_job_spec_file.exists()  # Use fixture

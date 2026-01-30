@@ -1,7 +1,19 @@
-"""EvalHub SDK - Framework adapter SDK for integrating with TrustyAI EvalHub.
+"""EvalHub SDK - Python SDK for interacting with EvalHub.
 
-This SDK provides a standardized way to create framework adapters that can
-be consumed by EvalHub, enabling a "Bring Your Own Framework" (BYOF) approach.
+This SDK provides three main components:
+
+1. **Common Models**: Core data models for EvalHub (always available)
+   - Benchmarks, evaluations, jobs, providers, and collections
+   - Request/response schemas and status enums
+
+2. **Python Client**: High-level API for interacting with EvalHub REST endpoints
+   - Synchronous and asynchronous clients
+   - Evaluation job submission and management
+   - Provider and benchmark discovery
+
+3. **Framework Adapters**: SDK for building custom evaluation framework adapters
+   - Standardised interfaces for "Bring Your Own Framework" (BYOF) approach
+   - Integration patterns for custom evaluation frameworks
 
 Installation extras:
   - core: Basic functionality for HTTP client operations
@@ -26,7 +38,7 @@ from .models import (
     ModelConfig,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.0a2"
 
 # Base exports - always available
 __all__ = [
@@ -76,8 +88,8 @@ except ImportError:
 # Package metadata
 __title__ = "eval-hub"
 __description__ = (
-    "SDK for building framework adapters that integrate with TrustyAI EvalHub"
+    "Python SDK for EvalHub: common models, REST API client, and framework adapter SDK"
 )
-__author__ = "TrustyAI Team"
-__author_email__ = "trustyai@redhat.com"
+__author__ = "AI Evaluations Team"
+__author_email__ = "rui@redhat.com"
 __license__ = "Apache 2.0"

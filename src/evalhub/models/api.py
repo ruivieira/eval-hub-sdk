@@ -32,29 +32,13 @@ class EvaluationStatus(str, Enum):
 class ModelConfig(BaseModel):
     """Configuration for the model being evaluated.
 
-    This matches the eval-hub API's Model schema which expects:
+    This matches the eval-hub API's ModelRef schema:
     - url: The model endpoint URL (e.g., vLLM, OpenAI-compatible endpoint)
     - name: Model name/identifier
-
-    Additional fields like provider, parameters, etc. can be passed via extra fields
-    since extra="allow" is set.
     """
-
-    model_config = ConfigDict(extra="allow")
 
     url: str = Field(..., description="Model endpoint URL")
     name: str = Field(..., description="Model name or identifier")
-    # Common optional fields (also accepted as extras)
-    provider: str | None = Field(default=None, description="Model provider (optional)")
-    parameters: dict[str, Any] = Field(
-        default_factory=dict, description="Model generation parameters (optional)"
-    )
-    device: str | None = Field(
-        default=None, description="Device placement hint (optional)"
-    )
-    batch_size: int | None = Field(
-        default=None, description="Batch size hint (optional)"
-    )
 
     @field_validator("name")
     @classmethod
