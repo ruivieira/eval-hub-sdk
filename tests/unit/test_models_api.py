@@ -104,7 +104,6 @@ class TestEvaluationRequest:
         model_payload: dict[str, Any] = {
             "url": "http://localhost:8000/v1",
             "name": "gpt-4",
-            "provider": "openai",
         }
         model = ModelConfig(**model_payload)
         request = EvaluationRequest(
