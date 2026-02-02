@@ -74,7 +74,7 @@ with SyncEvalHubClient() as eval_client:  # type: SyncEvalHubClient
             url="http://vllm-service.my-namespace.svc.cluster.local:8000/v1",
             name="meta-llama/Llama-2-7b-chat-hf",
         ),
-        num_few_shot=5,
+        benchmark_config={"num_few_shot": 5},
         experiment_name="GSM8K Evaluation",
         tags={"environment": "dev", "version": "v1"},
     )

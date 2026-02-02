@@ -95,7 +95,7 @@ class TestEvaluationRequest:
         assert request.benchmark_id == "test_bench"
         assert request.model.name == "test-model"
         assert request.num_examples is None
-        assert request.num_few_shot is None
+        assert "num_few_shot" not in request.benchmark_config.keys()
         assert request.benchmark_config == {}
         assert request.experiment_name is None
 
@@ -110,14 +110,13 @@ class TestEvaluationRequest:
             benchmark_id="mmlu",
             model=model,
             num_examples=100,
-            num_few_shot=5,
             benchmark_config={"subset": "college_math"},
             experiment_name="test_run_1",
         )
         assert request.benchmark_id == "mmlu"
         assert request.model.name == "gpt-4"
         assert request.num_examples == 100
-        assert request.num_few_shot == 5
+        assert "num_few_shot" not in request.benchmark_config.keys()
         assert request.benchmark_config == {"subset": "college_math"}
         assert request.experiment_name == "test_run_1"
 

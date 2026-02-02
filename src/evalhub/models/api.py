@@ -95,12 +95,6 @@ class EvaluationRequest(BaseModel):
     num_examples: int | None = Field(
         default=None, description="Number of examples to evaluate (None = all)"
     )
-    num_few_shot: int | None = Field(
-        default=None, description="Number of few-shot examples"
-    )
-    random_seed: int | None = Field(
-        default=42, description="Random seed for reproducibility"
-    )
 
     # Custom benchmark configuration
     benchmark_config: dict[str, Any] = Field(
