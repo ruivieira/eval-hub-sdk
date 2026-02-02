@@ -10,7 +10,7 @@ authors = [
     {name = "Rui Vieira", email = "rui@redhat.com"},
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11"  # needed for LMEval compatibility
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
