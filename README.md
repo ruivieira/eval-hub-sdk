@@ -191,7 +191,7 @@ adapter = MyFrameworkAdapter(settings=settings)
 
 callbacks = DefaultCallbacks(
     job_id=job_spec.job_id,
-    sidecar_url=str(settings.service_url),  # SERVICE_URL
+    sidecar_url=job_spec.callback_url,  # SERVICE_URL
     registry_url=settings.registry_url,      # REGISTRY_URL
     registry_username=settings.registry_username,
     registry_password=settings.registry_password,
@@ -294,7 +294,7 @@ adapter = MyFrameworkAdapter(settings=settings)
 # Create callbacks
 callbacks = DefaultCallbacks(
     job_id=job_spec.job_id,
-    sidecar_url=str(settings.service_url),
+    sidecar_url=job_spec.callback_url,
     registry_url=settings.registry_url,
     registry_username=settings.registry_username,
     registry_password=settings.registry_password,
@@ -546,7 +546,7 @@ adapter = MyFrameworkAdapter(settings=settings)
 # Create callbacks
 callbacks = DefaultCallbacks(
     job_id=job_spec.job_id,
-    sidecar_url=str(settings.service_url),
+    sidecar_url=job_spec.callback_url,
     registry_url=settings.registry_url,
     insecure=settings.registry_insecure,
 )
@@ -627,10 +627,9 @@ from evalhub.adapter import AdapterSettings
 
 def test_settings_parse(monkeypatch):
     monkeypatch.setenv("EVALHUB_MODE", "local")
-    monkeypatch.setenv("SERVICE_URL", "http://localhost:8080")
     monkeypatch.setenv("REGISTRY_URL", "localhost:5000")
     s = AdapterSettings.from_env()
-    assert str(s.service_url) == "http://localhost:8080/"
+    assert str(s.registry_url) == "localhost:5000"
 ```
 
 ### Quality Assurance
