@@ -37,6 +37,9 @@ class AsyncEvalHubClient(BaseAsyncClient):
         self,
         base_url: str = "http://localhost:8080",
         auth_token: str | None = None,
+        auth_token_path: str | None = None,
+        ca_bundle_path: str | None = None,
+        insecure: bool = False,
         timeout: float = 30.0,
         max_retries: int = 3,
         verify_ssl: bool = True,
@@ -49,10 +52,13 @@ class AsyncEvalHubClient(BaseAsyncClient):
 
         Args:
             base_url: Base URL of the EvalHub service (default: http://localhost:8080)
-            auth_token: Optional authentication token for API access
+            auth_token: Explicit authentication token (overrides auto-detection)
+            auth_token_path: Path to authentication token file (e.g., ServiceAccount token)
+            ca_bundle_path: Path to CA bundle for TLS verification
+            insecure: Allow insecure connections (skip TLS verification)
             timeout: Request timeout in seconds (default: 30.0)
             max_retries: Maximum number of retry attempts (default: 3)
-            verify_ssl: Whether to verify SSL certificates (default: True)
+            verify_ssl: Whether to verify SSL certificates (deprecated, use insecure instead)
             retry_initial_delay: Initial delay between retries in seconds (default: 1.0)
             retry_max_delay: Maximum delay between retries in seconds (default: 60.0)
             retry_backoff_factor: Multiplier for exponential backoff (default: 2.0)
@@ -61,6 +67,9 @@ class AsyncEvalHubClient(BaseAsyncClient):
         super().__init__(
             base_url=base_url,
             auth_token=auth_token,
+            auth_token_path=auth_token_path,
+            ca_bundle_path=ca_bundle_path,
+            insecure=insecure,
             timeout=timeout,
             max_retries=max_retries,
             verify_ssl=verify_ssl,
@@ -111,6 +120,9 @@ class SyncEvalHubClient(BaseSyncClient):
         self,
         base_url: str = "http://localhost:8080",
         auth_token: str | None = None,
+        auth_token_path: str | None = None,
+        ca_bundle_path: str | None = None,
+        insecure: bool = False,
         timeout: float = 30.0,
         max_retries: int = 3,
         verify_ssl: bool = True,
@@ -123,10 +135,13 @@ class SyncEvalHubClient(BaseSyncClient):
 
         Args:
             base_url: Base URL of the EvalHub service (default: http://localhost:8080)
-            auth_token: Optional authentication token for API access
+            auth_token: Explicit authentication token (overrides auto-detection)
+            auth_token_path: Path to authentication token file (e.g., ServiceAccount token)
+            ca_bundle_path: Path to CA bundle for TLS verification
+            insecure: Allow insecure connections (skip TLS verification)
             timeout: Request timeout in seconds (default: 30.0)
             max_retries: Maximum number of retry attempts (default: 3)
-            verify_ssl: Whether to verify SSL certificates (default: True)
+            verify_ssl: Whether to verify SSL certificates (deprecated, use insecure instead)
             retry_initial_delay: Initial delay between retries in seconds (default: 1.0)
             retry_max_delay: Maximum delay between retries in seconds (default: 60.0)
             retry_backoff_factor: Multiplier for exponential backoff (default: 2.0)
@@ -135,6 +150,9 @@ class SyncEvalHubClient(BaseSyncClient):
         super().__init__(
             base_url=base_url,
             auth_token=auth_token,
+            auth_token_path=auth_token_path,
+            ca_bundle_path=ca_bundle_path,
+            insecure=insecure,
             timeout=timeout,
             max_retries=max_retries,
             verify_ssl=verify_ssl,
