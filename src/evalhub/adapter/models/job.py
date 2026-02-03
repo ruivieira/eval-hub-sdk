@@ -14,6 +14,16 @@ from pydantic import BaseModel, Field
 from ...models.api import EvaluationResult, JobStatus, ModelConfig
 
 
+class ErrorInfo(BaseModel):
+    """Error information with message and code.
+
+    Matches the MessageInfo structure from eval-hub API.
+    """
+
+    message: str = Field(..., description="Error message")
+    message_code: str = Field(..., description="Error code identifier")
+
+
 class JobPhase(str, Enum):
     """Job execution phases."""
 
@@ -148,8 +158,8 @@ class JobStatusUpdate(BaseModel):
     completed_steps: int | None = Field(
         default=None, description="Number of completed steps"
     )
-    error_message: str | None = Field(
-        default=None, description="Error message if failed"
+    error: ErrorInfo | None = Field(
+        default=None, description="Error information if failed"
     )
     error_details: dict[str, Any] | None = Field(
         default=None, description="Detailed error information"
