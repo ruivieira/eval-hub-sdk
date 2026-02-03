@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import cached_property
+from pathlib import Path
 
 from .base import BaseAsyncClient, BaseSyncClient
 from .resources import (
@@ -37,8 +38,8 @@ class AsyncEvalHubClient(BaseAsyncClient):
         self,
         base_url: str = "http://localhost:8080",
         auth_token: str | None = None,
-        auth_token_path: str | None = None,
-        ca_bundle_path: str | None = None,
+        auth_token_path: Path | str | None = None,
+        ca_bundle_path: Path | str | None = None,
         insecure: bool = False,
         timeout: float = 30.0,
         max_retries: int = 3,
@@ -120,8 +121,8 @@ class SyncEvalHubClient(BaseSyncClient):
         self,
         base_url: str = "http://localhost:8080",
         auth_token: str | None = None,
-        auth_token_path: str | None = None,
-        ca_bundle_path: str | None = None,
+        auth_token_path: Path | str | None = None,
+        ca_bundle_path: Path | str | None = None,
         insecure: bool = False,
         timeout: float = 30.0,
         max_retries: int = 3,
