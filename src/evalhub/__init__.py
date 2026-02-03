@@ -38,7 +38,7 @@ from .models import (
     ModelConfig,
 )
 
-__version__ = "0.1.0a2"
+__version__ = "0.1.0a3"
 
 # Base exports - always available
 __all__ = [

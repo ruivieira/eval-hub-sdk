@@ -6,6 +6,7 @@ import asyncio
 import logging
 import random
 import time
+from pathlib import Path
 from typing import Any, Self, cast
 
 import httpx
@@ -42,6 +43,85 @@ def _calculate_retry_delay(
     return delay
 
 
+def _resolve_auth_token(
+    explicit_token: str | None,
+    token_path: Path | str | None,
+) -> str | None:
+    """Resolve authentication token with auto-detection.
+
+    Priority:
+    1. Explicit token parameter
+    2. Token from specified file path
+    3. Auto-detected Kubernetes ServiceAccount token
+    4. None (local mode, no authentication)
+
+    Args:
+        explicit_token: Explicit token string
+        token_path: Path to token file
+
+    Returns:
+        Token string or None
+    """
+    # Use explicit token if provided
+    if explicit_token:
+        return explicit_token
+
+    # Try specified token path
+    if token_path:
+        path = Path(token_path)
+        if path.exists():
+            return path.read_text().strip()
+        logger.warning(f"Specified token path does not exist: {token_path}")
+
+    # Auto-detect Kubernetes ServiceAccount token
+    default_token_path = Path("/var/run/secrets/kubernetes.io/serviceaccount/token")
+    if default_token_path.exists():
+        logger.debug("Auto-detected Kubernetes ServiceAccount token")
+        return default_token_path.read_text().strip()
+
+    # No token available (local mode)
+    logger.debug("No authentication token found - running in local mode")
+    return None
+
+
+def _resolve_ca_bundle(ca_bundle_path: Path | str | None) -> Path | None:
+    """Resolve CA bundle path with auto-detection.
+
+    Priority:
+    1. Explicitly specified CA bundle path
+    2. Auto-detected OpenShift service-ca
+    3. Auto-detected Kubernetes ServiceAccount CA
+    4. None (use system defaults or insecure mode)
+
+    Args:
+        ca_bundle_path: Path to CA bundle file
+
+    Returns:
+        Path to CA bundle or None
+    """
+    # Use explicit CA bundle if provided
+    if ca_bundle_path:
+        path = Path(ca_bundle_path)
+        if path.exists():
+            return path
+        logger.warning(f"Specified CA bundle does not exist: {ca_bundle_path}")
+
+    # Try common CA bundle locations
+    ca_paths = [
+        Path("/etc/pki/ca-trust/source/anchors/service-ca.crt"),  # OpenShift
+        Path("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"),  # Kubernetes
+    ]
+
+    for path in ca_paths:
+        if path.exists():
+            logger.debug(f"Auto-detected CA bundle at: {path}")
+            return path
+
+    # No CA bundle found (use system defaults)
+    logger.debug("No CA bundle found - using system defaults")
+    return None
+
+
 class ClientError(Exception):
     """Base exception for client errors."""
 
@@ -61,6 +141,9 @@ class BaseAsyncClient:
         self,
         base_url: str = "http://localhost:8080",
         auth_token: str | None = None,
+        auth_token_path: Path | str | None = None,
+        ca_bundle_path: Path | str | None = None,
+        insecure: bool = False,
         timeout: float = 30.0,
         max_retries: int = 3,
         verify_ssl: bool = True,
@@ -73,10 +156,13 @@ class BaseAsyncClient:
 
         Args:
             base_url: Base URL of the EvalHub service
-            auth_token: Optional authentication token
+            auth_token: Explicit authentication token (overrides auto-detection)
+            auth_token_path: Path to authentication token file
+            ca_bundle_path: Path to CA bundle for TLS verification
+            insecure: Allow insecure connections (skip TLS verification)
             timeout: Request timeout in seconds
             max_retries: Maximum number of retry attempts (default: 3)
-            verify_ssl: Whether to verify SSL certificates
+            verify_ssl: Whether to verify SSL certificates (deprecated, use insecure instead)
             retry_initial_delay: Initial delay between retries in seconds (default: 1.0)
             retry_max_delay: Maximum delay between retries in seconds (default: 60.0)
             retry_backoff_factor: Multiplier for exponential backoff (default: 2.0)
@@ -84,23 +170,49 @@ class BaseAsyncClient:
         """
         self.base_url = base_url.rstrip("/")
         self.api_base = f"{self.base_url}/api/v1"
-        self.auth_token = auth_token
         self.max_retries = max_retries
         self.retry_initial_delay = retry_initial_delay
         self.retry_max_delay = retry_max_delay
         self.retry_backoff_factor = retry_backoff_factor
         self.retry_randomization = retry_randomization
 
+        # Handle backward compatibility: verify_ssl=False -> insecure=True
+        if not verify_ssl:
+            insecure = True
+
+        # Resolve authentication token
+        self.auth_token = _resolve_auth_token(auth_token, auth_token_path)
+
+        # Resolve CA bundle (only if TLS verification is enabled)
+        if insecure:
+            self._ca_bundle = None
+            logger.warning("TLS verification disabled - skipping CA bundle detection")
+        else:
+            self._ca_bundle = _resolve_ca_bundle(ca_bundle_path)
+
         # Build headers
         headers = {"Content-Type": "application/json"}
-        if auth_token:
-            headers["Authorization"] = f"Bearer {auth_token}"
+        if self.auth_token:
+            headers["Authorization"] = f"Bearer {self.auth_token}"
+            logger.debug("HTTP client configured with Bearer token authentication")
+
+        # Determine TLS verification settings
+        verify: bool | str
+        if insecure:
+            verify = False
+            logger.warning("TLS verification disabled (insecure mode)")
+        elif self._ca_bundle:
+            verify = str(self._ca_bundle)
+            logger.debug(f"TLS verification using CA bundle: {self._ca_bundle}")
+        else:
+            verify = True  # Use system CA certificates
+            logger.debug("TLS verification using system CA certificates")
 
         # Create async HTTP client
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(timeout),
             limits=httpx.Limits(max_connections=20, max_keepalive_connections=5),
-            verify=verify_ssl,
+            verify=verify,
             headers=headers,
         )
 
@@ -166,6 +278,19 @@ class BaseAsyncClient:
 
             except httpx.HTTPStatusError as e:
                 last_exception = e
+                # Provide helpful error messages for authentication/authorization failures
+                if e.response.status_code == 401:
+                    logger.error(
+                        "Authentication failed (401). Ensure you have a valid "
+                        "ServiceAccount token or API key configured"
+                    )
+                    raise
+                elif e.response.status_code == 403:
+                    logger.error(
+                        "Authorization failed (403). Ensure you have the required "
+                        "permissions to access this resource"
+                    )
+                    raise
                 # Don't retry client errors (4xx), only server errors (5xx)
                 if e.response.status_code < 500 or attempt == self.max_retries:
                     raise
@@ -291,6 +416,9 @@ class BaseSyncClient:
         self,
         base_url: str = "http://localhost:8080",
         auth_token: str | None = None,
+        auth_token_path: Path | str | None = None,
+        ca_bundle_path: Path | str | None = None,
+        insecure: bool = False,
         timeout: float = 30.0,
         max_retries: int = 3,
         verify_ssl: bool = True,
@@ -303,10 +431,13 @@ class BaseSyncClient:
 
         Args:
             base_url: Base URL of the EvalHub service
-            auth_token: Optional authentication token
+            auth_token: Explicit authentication token (overrides auto-detection)
+            auth_token_path: Path to authentication token file
+            ca_bundle_path: Path to CA bundle for TLS verification
+            insecure: Allow insecure connections (skip TLS verification)
             timeout: Request timeout in seconds
             max_retries: Maximum number of retry attempts (default: 3)
-            verify_ssl: Whether to verify SSL certificates
+            verify_ssl: Whether to verify SSL certificates (deprecated, use insecure instead)
             retry_initial_delay: Initial delay between retries in seconds (default: 1.0)
             retry_max_delay: Maximum delay between retries in seconds (default: 60.0)
             retry_backoff_factor: Multiplier for exponential backoff (default: 2.0)
@@ -314,23 +445,49 @@ class BaseSyncClient:
         """
         self.base_url = base_url.rstrip("/")
         self.api_base = f"{self.base_url}/api/v1"
-        self.auth_token = auth_token
         self.max_retries = max_retries
         self.retry_initial_delay = retry_initial_delay
         self.retry_max_delay = retry_max_delay
         self.retry_backoff_factor = retry_backoff_factor
         self.retry_randomization = retry_randomization
 
+        # Handle backward compatibility: verify_ssl=False -> insecure=True
+        if not verify_ssl:
+            insecure = True
+
+        # Resolve authentication token
+        self.auth_token = _resolve_auth_token(auth_token, auth_token_path)
+
+        # Resolve CA bundle (only if TLS verification is enabled)
+        if insecure:
+            self._ca_bundle = None
+            logger.warning("TLS verification disabled - skipping CA bundle detection")
+        else:
+            self._ca_bundle = _resolve_ca_bundle(ca_bundle_path)
+
         # Build headers
         headers = {"Content-Type": "application/json"}
-        if auth_token:
-            headers["Authorization"] = f"Bearer {auth_token}"
+        if self.auth_token:
+            headers["Authorization"] = f"Bearer {self.auth_token}"
+            logger.debug("HTTP client configured with Bearer token authentication")
+
+        # Determine TLS verification settings
+        verify: bool | str
+        if insecure:
+            verify = False
+            logger.warning("TLS verification disabled (insecure mode)")
+        elif self._ca_bundle:
+            verify = str(self._ca_bundle)
+            logger.debug(f"TLS verification using CA bundle: {self._ca_bundle}")
+        else:
+            verify = True  # Use system CA certificates
+            logger.debug("TLS verification using system CA certificates")
 
         # Create sync HTTP client
         self._client = httpx.Client(
             timeout=httpx.Timeout(timeout),
             limits=httpx.Limits(max_connections=20, max_keepalive_connections=5),
-            verify=verify_ssl,
+            verify=verify,
             headers=headers,
         )
 
@@ -396,6 +553,19 @@ class BaseSyncClient:
 
             except httpx.HTTPStatusError as e:
                 last_exception = e
+                # Provide helpful error messages for authentication/authorization failures
+                if e.response.status_code == 401:
+                    logger.error(
+                        "Authentication failed (401). Ensure you have a valid "
+                        "ServiceAccount token or API key configured"
+                    )
+                    raise
+                elif e.response.status_code == 403:
+                    logger.error(
+                        "Authorization failed (403). Ensure you have the required "
+                        "permissions to access this resource"
+                    )
+                    raise
                 # Don't retry client errors (4xx), only server errors (5xx)
                 if e.response.status_code < 500 or attempt == self.max_retries:
                     raise
