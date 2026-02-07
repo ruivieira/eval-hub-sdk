@@ -255,7 +255,7 @@ class DefaultCallbacks(JobCallbacks):
 
                 # Transform to eval-hub API format
                 status_event = {
-                    "benchmark_id": self.benchmark_id,
+                    "id": self.benchmark_id,
                     "state": update.status.value,
                     "status": update.status.value,
                     "message": update.message.model_dump(mode="json"),
@@ -269,7 +269,7 @@ class DefaultCallbacks(JobCallbacks):
                 if self.provider_id:
                     status_event["provider_id"] = self.provider_id
 
-                data = {"status_event": status_event}
+                data = {"benchmark_status_event": status_event}
 
                 response = self._http_client.post(url, json=data, timeout=10.0)
                 response.raise_for_status()
@@ -341,7 +341,7 @@ class DefaultCallbacks(JobCallbacks):
 
                 # Build status event with results
                 status_event = {
-                    "benchmark_id": self.benchmark_id,
+                    "id": self.benchmark_id,
                     "state": JobStatus.COMPLETED.value,
                     "status": JobStatus.COMPLETED.value,
                     "message": {
@@ -365,7 +365,7 @@ class DefaultCallbacks(JobCallbacks):
                         "size_bytes": results.oci_artifact.size_bytes,
                     }
 
-                data = {"status_event": status_event}
+                data = {"benchmark_status_event": status_event}
 
                 response = self._http_client.post(url, json=data, timeout=10.0)
                 response.raise_for_status()

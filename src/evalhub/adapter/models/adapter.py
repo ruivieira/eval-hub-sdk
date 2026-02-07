@@ -55,34 +55,65 @@ class FrameworkAdapter(ABC):
 
                 return JobResults(...)
 
-        # Usage (settings loaded from env by default)
+        # Production usage (auto-detects /meta/job.json in k8s)
         adapter = MyAdapter()
+
+        # Local testing with hardcoded path (no env var needed)
+        adapter = MyAdapter(job_spec_path="/custom/path/to/job.json")
+
+        # Alternative: using environment variable
+        # export EVALHUB_JOB_SPEC_PATH=/path/to/job.json
+        adapter = MyAdapter()
+
+        # Run the job
         callbacks = DefaultCallbacks(
             job_id=adapter.job_spec.job_id,
             sidecar_url=adapter.job_spec.callback_url,
             ...
         )
         results = adapter.run_benchmark_job(adapter.job_spec, callbacks)
-
-        # Testing (inject custom settings)
-        adapter = MyAdapter(settings=custom_settings)
         ```
     """
 
-    def __init__(self, settings: AdapterSettings | None = None) -> None:
+    def __init__(
+        self,
+        settings: AdapterSettings | None = None,
+        job_spec_path: str | None = None,
+    ) -> None:
         """Initialize adapter with settings and load JobSpec.
 
         Args:
             settings: Runtime settings. If None, loads from environment via
                       AdapterSettings.from_env().
+            job_spec_path: Optional path to job spec JSON file.
+                          If provided, overrides EVALHUB_JOB_SPEC_PATH env var.
+                          This is a convenience parameter - you can also pass it
+                          via settings.job_spec_path.
 
         Raises:
             FileNotFoundError: If job spec file does not exist
             ValueError: If job spec JSON is invalid
         """
+        from pathlib import Path
+
         from ..settings import AdapterSettings as SettingsClass
 
-        self._settings = settings if settings is not None else SettingsClass.from_env()
+        # If job_spec_path is provided, create or update settings
+        if job_spec_path is not None:
+            if settings is not None:
+                # Update existing settings
+                settings.job_spec_path = Path(job_spec_path)
+                self._settings = settings
+            else:
+                # Create new settings from env with overridden path
+                self._settings = SettingsClass.from_env()
+                self._settings.job_spec_path = Path(job_spec_path)
+        else:
+            # Use provided settings or load from env
+            self._settings = (
+                settings if settings is not None else SettingsClass.from_env()
+            )
+
         self._job_spec = self._load_job_spec()
 
     def _load_job_spec(self) -> JobSpec:
