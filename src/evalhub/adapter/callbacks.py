@@ -255,7 +255,7 @@ class DefaultCallbacks(JobCallbacks):
 
                 # Transform to eval-hub API format
                 status_event = {
-                    "benchmark_id": self.benchmark_id,
+                    "id": self.benchmark_id,
                     "state": update.status.value,
                     "status": update.status.value,
                     "message": update.message.model_dump(mode="json"),
@@ -341,7 +341,7 @@ class DefaultCallbacks(JobCallbacks):
 
                 # Build status event with results
                 status_event = {
-                    "benchmark_id": self.benchmark_id,
+                    "id": self.benchmark_id,
                     "state": JobStatus.COMPLETED.value,
                     "status": JobStatus.COMPLETED.value,
                     "message": {
