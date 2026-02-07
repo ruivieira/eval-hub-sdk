@@ -269,7 +269,7 @@ class DefaultCallbacks(JobCallbacks):
                 if self.provider_id:
                     status_event["provider_id"] = self.provider_id
 
-                data = {"status_event": status_event}
+                data = {"benchmark_status_event": status_event}
 
                 response = self._http_client.post(url, json=data, timeout=10.0)
                 response.raise_for_status()
@@ -365,7 +365,7 @@ class DefaultCallbacks(JobCallbacks):
                         "size_bytes": results.oci_artifact.size_bytes,
                     }
 
-                data = {"status_event": status_event}
+                data = {"benchmark_status_event": status_event}
 
                 response = self._http_client.post(url, json=data, timeout=10.0)
                 response.raise_for_status()
