@@ -210,11 +210,11 @@ wheels = [
 
 [[package]]
 name = "cachetools"
-version = "7.0.1"
+version = "6.2.6"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d4/07/56595285564e90777d758ebd383d6b0b971b87729bbe2184a849932a3736/cachetools-7.0.1.tar.gz", hash = "sha256:e31e579d2c5b6e2944177a0397150d312888ddf4e16e12f1016068f0c03b8341", size = 36126, upload-time = "2026-02-10T22:24:05.03Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/91/d9ae9a66b01102a18cd16db0cf4cd54187ffe10f0865cc80071a4104fbb3/cachetools-6.2.6.tar.gz", hash = "sha256:16c33e1f276b9a9c0b49ab5782d901e3ad3de0dd6da9bf9bcd29ac5672f2f9e6", size = 32363, upload-time = "2026-01-27T20:32:59.956Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/9e/5faefbf9db1db466d633735faceda1f94aa99ce506ac450d232536266b32/cachetools-7.0.1-py3-none-any.whl", hash = "sha256:8f086515c254d5664ae2146d14fc7f65c9a4bce75152eb247e5a9c5e6d7b2ecf", size = 13484, upload-time = "2026-02-10T22:24:03.741Z" },
+    { url = "https://files.pythonhosted.org/packages/90/45/f458fa2c388e79dd9d8b9b0c99f1d31b568f27388f2fdba7bb66bbc0c6ed/cachetools-6.2.6-py3-none-any.whl", hash = "sha256:8c9717235b3c651603fff0076db52d6acbfd1b338b8ed50256092f7ce9c85bda", size = 11668, upload-time = "2026-01-27T20:32:58.527Z" },
 ]
 
 [[package]]
@@ -752,7 +752,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'core'", specifier = ">=0.25.0" },
     { name = "importlib-metadata", specifier = ">=6.0.0" },
     { name = "lm-eval", marker = "extra == 'examples'", specifier = ">=0.4.0" },
-    { name = "mlflow-skinny", marker = "extra == 'adapter'", specifier = ">=3.10.0rc0" },
+    { name = "mlflow-skinny", marker = "extra == 'adapter'", specifier = "==3.9.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "==1.7.1" },
     { name = "olot", marker = "extra == 'adapter'", specifier = ">=0.1.15" },
     { name = "oras", marker = "extra == 'adapter'", specifier = ">=0.2.39" },
@@ -1792,7 +1792,7 @@ wheels = [
 
 [[package]]
 name = "mlflow-skinny"
-version = "3.10.0rc0"
+version = "3.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1815,9 +1815,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/8d/2ad0bc25c0d15a8146d5de991ddb905673c82d6a94e38d0b934146e6347a/mlflow_skinny-3.10.0rc0.tar.gz", hash = "sha256:60a202b43ef6e23fff424d81ea52b179aa60d23338bf391a96efa18530cb09d4", size = 2453271, upload-time = "2026-02-12T01:00:44.511Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/18/34a8c085eece1abb7edaed3b9a383670b97a4a234fec62d1823e8c64d11b/mlflow_skinny-3.9.0.tar.gz", hash = "sha256:0598e0635dd1af9d195fb429210819aa4b56e9d6014f87134241f2325d57a290", size = 2329309, upload-time = "2026-01-29T07:42:36.8Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/d9/f5e0c2bc178c21b95e8017a180de20fb59e9888cb51a1b97340c841356bf/mlflow_skinny-3.10.0rc0-py3-none-any.whl", hash = "sha256:f0d6371c0c7e8e18e29206787c29b3d34ef90c597c10ecf66142674a07fd6b6b", size = 2958752, upload-time = "2026-02-12T01:00:42.355Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/7c/a82fd9d6ecefba347e3a65168df63fd79784fa8c22b8734fb4cb71f2d469/mlflow_skinny-3.9.0-py3-none-any.whl", hash = "sha256:9b98706cdf9e07a61da7fbcd717c8d35ac89c76e084d25aafdbc150028e832d5", size = 2807062, upload-time = "2026-01-29T07:42:35.132Z" },
 ]
 
 [[package]]
