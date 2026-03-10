@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eval-hub-sdk"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python SDK for EvalHub: common models, REST API client, and framework adapter SDK"
 authors = [
     {name = "Rui Vieira", email = "rui@redhat.com"},
@@ -40,7 +40,7 @@ core = [
 # Adapter development - for building custom evaluation framework adapters
 adapter = [
     "eval-hub-sdk[core]",
-    "mlflow-skinny>=3.10.0rc0",
+    "mlflow-skinny>=3.10.1",
     "olot>=0.1.15",
     "oras>=0.2.39",
 ]

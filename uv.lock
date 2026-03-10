@@ -680,7 +680,7 @@ wheels = [
 
 [[package]]
 name = "eval-hub-sdk"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "importlib-metadata" },
@@ -752,7 +752,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'core'", specifier = ">=0.25.0" },
     { name = "importlib-metadata", specifier = ">=6.0.0" },
     { name = "lm-eval", marker = "extra == 'examples'", specifier = ">=0.4.0" },
-    { name = "mlflow-skinny", marker = "extra == 'adapter'", specifier = ">=3.10.0rc0" },
+    { name = "mlflow-skinny", marker = "extra == 'adapter'", specifier = ">=3.10.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "==1.7.1" },
     { name = "olot", marker = "extra == 'adapter'", specifier = ">=0.1.15" },
     { name = "oras", marker = "extra == 'adapter'", specifier = ">=0.2.39" },
@@ -1792,7 +1792,7 @@ wheels = [
 
 [[package]]
 name = "mlflow-skinny"
-version = "3.10.0rc0"
+version = "3.10.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1815,9 +1815,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/8d/2ad0bc25c0d15a8146d5de991ddb905673c82d6a94e38d0b934146e6347a/mlflow_skinny-3.10.0rc0.tar.gz", hash = "sha256:60a202b43ef6e23fff424d81ea52b179aa60d23338bf391a96efa18530cb09d4", size = 2453271, upload-time = "2026-02-12T01:00:44.511Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/65/5b2c28e74c167ba8a5afe59399ef44291a0f140487f534db1900f09f59f6/mlflow_skinny-3.10.1.tar.gz", hash = "sha256:3d1c5c30245b6e7065b492b09dd47be7528e0a14c4266b782fe58f9bcd1e0be0", size = 2478631, upload-time = "2026-03-05T10:49:01.47Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/d9/f5e0c2bc178c21b95e8017a180de20fb59e9888cb51a1b97340c841356bf/mlflow_skinny-3.10.0rc0-py3-none-any.whl", hash = "sha256:f0d6371c0c7e8e18e29206787c29b3d34ef90c597c10ecf66142674a07fd6b6b", size = 2958752, upload-time = "2026-02-12T01:00:42.355Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/52/17460157271e70b0d8444d27f8ad730ef7d95fb82fac59dc19f11519b921/mlflow_skinny-3.10.1-py3-none-any.whl", hash = "sha256:df1dd507d8ddadf53bfab2423c76cdcafc235cd1a46921a06d1a6b4dd04b023c", size = 2987098, upload-time = "2026-03-05T10:48:59.566Z" },
 ]
 
 [[package]]
